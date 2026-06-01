@@ -3,7 +3,90 @@ import { db } from './database.js';
 import { AuthenticatedRequest, signToken, hashPassword, comparePassword, authenticateToken } from './auth.js';
 import { GoogleGenAI, Type } from '@google/genai';
 
-const router = Router();
+const router = Router(); 
+// ==========================================
+// ANALYTICS DATA AGGREGATION ENDPOINTS
+// ==========================================
+
+router.get('/api/analytics/summary', authenticateToken, (req: any, res: any) => {
+  try {
+    const allAttendance = db.data?.attendance || [];
+    const allClasses = db.data?.classes || [];
+    
+    // Calculate unique students across all rosters
+    const uniqueStudents = new Set<string>();
+    allClasses.forEach((c: any) => c.students?.forEach((s: string) => uniqueStudents.add(s)));
+    
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    
+    allAttendance.forEach((record: any) => {
+      totalPresent += record.present?.length || 0;
+      totalAbsent += record.absent?.length || 0;
+    });
+    
+    const totalSlots = totalPresent + totalAbsent;
+    const overallPercentage = totalSlots > 0 ? Math.round((totalPresent / totalSlots) * 100) : 100;
+
+    res.json({
+      totalStudents: uniqueStudents.size,
+      totalClasses: allClasses.length,
+      totalRecords: allAttendance.length,
+      overallAttendancePercentage: overallPercentage,
+      globalRatios: [
+        { name: 'Present', value: totalPresent },
+        { name: 'Absent', value: totalAbsent }
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal analytics engine failure' });
+  }
+});
+
+router.get('/api/analytics/class/:classId', authenticateToken, (req: any, res: any) => {
+  try {
+    const { classId } = req.params;
+    const records = (db.data?.attendance || []).filter((r: any) => r.classId === classId);
+    const targetClass = (db.data?.classes || []).find((c: any) => c.id === classId);
+
+    if (!targetClass) {
+      return res.status(404).json({ error: 'Target module profile not found' });
+    }
+
+    // 1. Map dynamic day-by-day attendance counts
+    const dailyTrends = records.map((r: any) => {
+      const total = (r.present?.length || 0) + (r.absent?.length || 0);
+      return {
+        date: new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        Present: r.present?.length || 0,
+        Absent: r.absent?.length || 0,
+        Rate: total > 0 ? Math.round((r.present.length / total) * 100) : 0
+      };
+    });
+
+    // 2. Generate student-by-student average percentages
+    const performanceMap: Record<string, { present: number; total: number }> = {};
+    targetClass.students?.forEach((studentName: string) => {
+      performanceMap[studentName] = { present: 0, total: 0 };
+    });
+
+    records.forEach((r: any) => {
+      r.present?.forEach((s: string) => { if (performanceMap[s]) { performanceMap[s].present++; performanceMap[s].total++; } });
+      r.absent?.forEach((s: string) => { if (performanceMap[s]) performanceMap[s].total++; });
+    });
+
+    const studentPerformance = Object.entries(performanceMap).map(([name, data]: any) => ({
+      name,
+      percentage: data.total > 0 ? Math.round((data.present / data.total) * 100) : 100,
+      totalSessions: data.total
+    }));
+
+    res.json({ dailyTrends, studentPerformance });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed compiling class statistics context' });
+  }
+});
+export default
 
 // Initialize Gemini Client
 const ai = new GoogleGenAI({
