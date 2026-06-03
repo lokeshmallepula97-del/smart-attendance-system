@@ -5,6 +5,7 @@ import StudentHub from './StudentHub';
 import AdminConsole from './AdminConsole';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import AnalyticsReports from './AnalyticsReports';
+import FaceDetection from './FaceDetection';
 
 interface UserData { name: string; email: string; role: 'admin' | 'teacher' | 'student'; }
 
@@ -14,7 +15,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'roster' | 'analytics'>('roster');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+   console.log(
+  "Token:",
+  localStorage.getItem("smart_attendance_auth_token")
+);
+   const token = localStorage.getItem('smart_attendance_auth_token');
     if (!token) {
       navigate('/');
       return;
@@ -71,6 +76,7 @@ export default function Dashboard() {
 
       {/* Main Container Viewport */}
       <main className="max-w-7xl mx-auto p-6">
+      <FaceDetection />
         {user.role === 'admin' && <AdminConsole />}
         {user.role === 'student' && <StudentHub />}
         {user.role === 'teacher' && activeTab === 'roster' && (

@@ -1,0 +1,15 @@
+{
+  "users": [
+    {
+      "email": "lokesh@school.edu",
+      "passwordHash": "$2b$10$FQt5wcdVMczkbmxdQDFypeD74L6KYqncWKDKLrfywZl7DTYfrucvW",
+      "name": "Prof. Lokesh",
+      "role": "teacher",
+      "_id": "4f6o67krimpwgbof6",
+      "createdAt": "2026-06-02T09:45:04.866Z"
+    }
+  ],
+  "classes": [],
+  "students": [],
+  "attendance": []
+}

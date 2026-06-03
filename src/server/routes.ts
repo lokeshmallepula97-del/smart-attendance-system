@@ -86,7 +86,6 @@ router.get('/api/analytics/class/:classId', authenticateToken, (req: any, res: a
     res.status(500).json({ error: 'Failed compiling class statistics context' });
   }
 });
-export default
 
 // Initialize Gemini Client
 const ai = new GoogleGenAI({
